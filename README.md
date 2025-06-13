@@ -1,2 +1,2 @@
-# Emerging-Project
-Dc motor speed control system using pid controller
+# Closed-Loop DC Motor Control System Using Joystick and PID Feedback
+This project presents a turret-style motor control system using a joystick to define direction and speed, an encoder for real-time RPM feedback, and a PID controller for accurate speed regulation. Built around an Arduino Uno, the system includes a DC motor, servo for vertical movement, slip ring, motor driver, LM2596 voltage regulator, and IR sensor. It demonstrates efficient closed-loop control suitable for robotics and mechanical applications, with smooth, responsive motion and stable performance across varying conditions.
