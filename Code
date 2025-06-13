@@ -1,0 +1,92 @@
+#include <Servo.h>
+
+Servo myServo;
+
+double Kp = 1.0;
+double Ki = 0.1;
+double Kd = 0.05;
+
+double setpoint = 0;
+double inputRPM = 0;
+double output = 0;
+double lastError = 0;
+double integral = 0;
+
+unsigned long lastPIDTime = 0;
+
+const int joystickPin = A1;
+const int servoPin = 10;
+const int RPWM = 8;
+const int LPWM = 9;
+const int x = A0;
+const int sensorPin = A2;
+
+int threshold = 500;
+bool lastState = false;
+volatile unsigned long pulseCount = 0;
+unsigned long lastRPMMeasureTime = 0;
+float rpm = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(RPWM, OUTPUT);
+  pinMode(LPWM, OUTPUT);
+  pinMode(x, INPUT);
+  pinMode(sensorPin, INPUT);
+  myServo.attach(servoPin);
+  pinMode(joystickPin, INPUT);
+}
+
+void loop() {
+  int xval = analogRead(x);
+  setpoint = map(xval, 0, 1023, -255, 255);
+
+  int sensorValue = analogRead(sensorPin);
+  bool currentState = (sensorValue > threshold);
+
+  if (currentState && !lastState) {
+    pulseCount++;
+  }
+  lastState = currentState;
+
+  unsigned long currentTime = millis();
+  if (currentTime - lastRPMMeasureTime >= 1000) {
+    rpm = pulseCount * 60.0;
+    pulseCount = 0;
+    lastRPMMeasureTime = currentTime;
+  }
+  inputRPM = rpm;
+
+  double error = setpoint - inputRPM;
+  double deltaTime = (currentTime - lastPIDTime) / 1000.0;
+
+  integral += error * deltaTime;
+  double derivative = (error - lastError) / deltaTime;
+
+  output = Kp * error + Ki * integral + Kd * derivative;
+  output = constrain(output, -255, 255);
+
+  if (output > 0) {
+    analogWrite(RPWM, abs(output));
+    analogWrite(LPWM, 0);
+  } else if (output < 0) {
+    analogWrite(LPWM, abs(output));
+    analogWrite(RPWM, 0);
+  } else {
+    analogWrite(RPWM, 0);
+    analogWrite(LPWM, 0);
+  }
+
+  lastError = error;
+  lastPIDTime = currentTime;
+
+  int joystickValue = analogRead(joystickPin);
+  int angle = map(joystickValue, 0, 1023, 45, 135);
+  myServo.write(angle);
+
+  Serial.print("Setpoint: "); Serial.print(setpoint);
+  Serial.print(" | RPM: "); Serial.print(inputRPM);
+  Serial.print(" | Output: "); Serial.println(output);
+
+  delay(20);
+}
